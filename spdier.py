@@ -1,5 +1,4 @@
 import re
-
 from selenium import webdriver
 from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
@@ -9,13 +8,15 @@ from pyquery import PyQuery as pq
 from config import *
 import pymongo
 
+# mongo数据库数据
 client = pymongo.MongoClient(MONGO_URL)
 db = client[MONGO_DB]
 
-
-
+# 创建一个浏览器设置等待加载时间
 browser = webdriver.Chrome()
 wait = WebDriverWait(browser, 10)
+
+# 打开淘宝首页，添加搜索关键字
 def searcher():
     try:
         browser.get("https://www.taobao.com")
@@ -31,6 +32,7 @@ def searcher():
     except TimeoutException:
         return  searcher()
 
+# 执行翻页的操作
 def next_page(page_number):
     try:
         input = wait.until(
@@ -45,6 +47,7 @@ def next_page(page_number):
     except TimeoutException:
         next_page(page_number)
 
+# 提取每个产品的详细信息
 def get_products():
     wait.until(EC.presence_of_element_located(
             (By.CSS_SELECTOR, "#mainsrp-itemlist .items .item")))
@@ -63,6 +66,7 @@ def get_products():
         # print(product)
         save_to_mongo(product)
 
+# 把产品信息存储数据库
 def save_to_mongo(result):
     try:
         if db[MONGO_TABLE].insert(result):
@@ -73,6 +77,7 @@ def save_to_mongo(result):
 
 def main():
     total = searcher()
+    # 产品总页数
     total = int(re.compile("(\d+)").search(total).group(1))
     for i in range(2, total + 1):
         next_page(i)
